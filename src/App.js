@@ -29,10 +29,10 @@ const Accordion = ({ oneAtATime, children, gap = "0" }) => {
           ...panels.current,
           [id]: {
             details: details ?? panels.current[id]?.details,
-            summary: summary ?? panels.current[id]?.summary
-          }
+            summary: summary ?? panels.current[id]?.summary,
+          },
         };
-      }
+      },
     }),
     [oneAtATime]
   );
@@ -43,7 +43,7 @@ const Accordion = ({ oneAtATime, children, gap = "0" }) => {
         style={{
           display: "flex",
           flexDirection: "column",
-          gap
+          gap,
         }}
       >
         {children}
@@ -61,7 +61,7 @@ const usePanelState = () => {
 };
 
 const StyledSummary = styled.summary`
-  padding: 8px 0;
+  padding: 8px;
   text-align: left;
   border: 1px solid var(--arrowColor);
   display: flex;
@@ -70,7 +70,7 @@ const StyledSummary = styled.summary`
 `;
 
 const StyledDetails = styled.details`
-  --padding: 8px;
+  --spacer: 8px;
   --arrow: 16px;
   --arrowColor: dodgerblue;
 
@@ -79,7 +79,6 @@ const StyledDetails = styled.details`
   svg {
     width: var(--arrow);
     height: auto;
-    padding: 0 8px;
   }
 `;
 const Panel = ({ children }) => {
@@ -88,7 +87,7 @@ const Panel = ({ children }) => {
   const { register, handleToggle } = useAccordionApi();
 
   return (
-    <PanelContext.Provider value={{ detailsId: id }}>
+    <PanelContext.Provider value={{ detailsRef: ref, detailsId: id }}>
       <StyledDetails
         onClick={handleToggle}
         id={id}
@@ -106,34 +105,43 @@ const Panel = ({ children }) => {
 const Icon = () => {
   const { detailsId } = usePanelState();
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isLast, setIsLast] = React.useState(false);
 
+  const { detailsRef } = usePanelState();
   useEffect(() => {
     const handle = (e) => {
       setIsOpen(e.target.open);
     };
-    const details = document.querySelector(`[id="${detailsId}"]`);
 
-    if (!details) return;
+    if (!detailsRef.current) return;
 
-    details.addEventListener("toggle", handle);
+    const el = detailsRef.current;
+    const summary = [...el.children].find((e) => e.tagName === "SUMMARY");
+
+    setIsLast(summary.lastChild.tagName === "svg");
+
+    el.addEventListener("toggle", handle);
 
     return () => {
-      details.removeEventListener("toggle", handle);
+      el.removeEventListener("toggle", handle);
     };
-  }, [detailsId]);
+  }, [detailsId, detailsRef]);
 
   return (
     <>
       <svg
-        style={{ transform: isOpen ? "rotate(90deg)" : "rotate(0)" }}
+        style={{
+          margin: isLast ? "0 0 0 auto" : "0 8px 0 0",
+          transform: isOpen ? "rotate(180deg)" : "rotate(0)",
+        }}
         xmlns="http://www.w3.org/2000/svg"
         width="16"
         height="16"
         fill="var(--arrowColor)"
-        class="bi bi-caret-right-fill"
+        class="bi bi-caret-up-fill"
         viewBox="0 0 16 16"
       >
-        <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
+        <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z" />
       </svg>
     </>
   );
@@ -152,7 +160,6 @@ const Summary = ({ children }) => {
         register(detailsId, { summary: el });
       }}
     >
-      <Icon />
       {children}
     </StyledSummary>
   );
@@ -162,7 +169,10 @@ const Flex = styled.div`
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: var(--padding) calc(var(--padding) + var(--arrow));
+  padding: ${({ iconLeft = true }) =>
+    iconLeft
+      ? `var(--spacer) calc(var(--spacer) * 2 + var(--arrow))`
+      : "var(--spacer)"};
 `;
 
 export default function App() {
@@ -170,16 +180,25 @@ export default function App() {
     <div className="App">
       <Accordion oneAtATime gap="8px">
         <Panel>
-          <Summary>hi</Summary>
+          <Summary>
+            <Icon />
+            hi
+          </Summary>
           <Flex>hello</Flex>
         </Panel>
         <Panel>
-          <Summary>hi</Summary>
+          <Summary>
+            <Icon />
+            hi
+          </Summary>
           <Flex>hello</Flex>
         </Panel>
         <Panel>
-          <Summary>hi</Summary>
-          <Flex>hello</Flex>
+          <Summary>
+            hi
+            <Icon />
+          </Summary>
+          <Flex iconLeft={false}>hello</Flex>
         </Panel>
       </Accordion>
     </div>
